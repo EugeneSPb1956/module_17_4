@@ -8,8 +8,8 @@ from app.backend.db_depends import get_db
 
 # Аннотации, Модели БД и Pydantic.
 from typing import Annotated
-from app.models import User
-from app.schemas import CreateUser, UpdateUser  #  <--
+from app.models import User, Task
+from app.schemas import CreateUser, UpdateUser  # <--
 
 # Функции работы с записями.
 from sqlalchemy import insert, select, update, delete
@@ -17,23 +17,31 @@ from sqlalchemy import insert, select, update, delete
 # Функция создания slug-строки
 from slugify import slugify
 
-
 router = APIRouter(prefix='/user', tags=['user'])
+
 
 @router.get('/')
 async def all_users(db: Annotated[Session, Depends(get_db)]):
     users = db.scalars(select(User)).all()
     return users
 
+
 @router.get('/user_id')
 async def user_by_id(db: Annotated[Session, Depends(get_db)], user_id: int):
     user = db.scalar(select(User).where(User.id == user_id))
     if user is None:
-            raise HTTPException(
+        raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail='User was not found'
         )
     return user
+
+
+@router.get('/user_id/tasks')
+async def tasks_by_user_id(db: Annotated[Session, Depends(get_db)], user_id: int):
+    tasks = db.scalars(select(Task).where(Task.user_id == user_id)).all()
+    return tasks
+
 
 @router.post('/create')
 async def create_user(db: Annotated[Session, Depends(get_db)], create_user: CreateUser):
@@ -48,6 +56,7 @@ async def create_user(db: Annotated[Session, Depends(get_db)], create_user: Crea
         'transaction': 'Successful'
     }
 
+
 @router.put('/update')
 async def update_user(db: Annotated[Session, Depends(get_db)], user_id: int, update_user: UpdateUser):
     user = db.scalar(select(User).where(User.id == user_id))
@@ -58,17 +67,18 @@ async def update_user(db: Annotated[Session, Depends(get_db)], user_id: int, upd
         )
 
     db.execute(update(User).where(User.id == user_id).values(
-                 username=update_user.username,
-                 firstname = update_user.firstname,
-                 lastname = update_user.lastname,
-                 age = update_user.age,
-                 slug = slugify(update_user.slug)))
+        username=update_user.username,
+        firstname=update_user.firstname,
+        lastname=update_user.lastname,
+        age=update_user.age,
+        slug=slugify(update_user.slug)))
 
     db.commit()
     return {
         'status_code': status.HTTP_200_OK,
         'transaction': 'User update was successful'
     }
+
 
 @router.delete('/delete')
 async def delete_user(db: Annotated[Session, Depends(get_db)], user_id: int):
@@ -79,10 +89,13 @@ async def delete_user(db: Annotated[Session, Depends(get_db)], user_id: int):
             detail='User was not found'
         )
     db.execute(delete(User).where(User.id == user_id))
-#    db.delete().where(User.id == user_id)
+    tasks = db.scalars(select(Task).where(Task.user_id == user_id)).all()
+    if tasks:
+        db.execute(delete(Task).where(Task.user_id == user_id))  # <-- !
+        # stmt = delete(User).where(User.name.in_(["squidward", "sandy"]))
+        # >> > session.execute(stmt)
     db.commit()
     return {
         'status_code': status.HTTP_200_OK,
         'transaction': 'User delete was successful'
     }
-
