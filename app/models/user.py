@@ -11,11 +11,8 @@ class User(Base):
     lastname = Column(String)
     age = Column(Integer)
     slug = Column(String, unique=True, index=True)
-    # task_id = Column(Integer, ForeignKey('tasks.id'))
 
     tasks = relationship('Task', back_populates='user')
-# tasks - объект связи с таблицей Task, где back_populates='user'.
-# ategory = relationship('Category', back_populates='products')
 
 from sqlalchemy.schema import CreateTable
 print(CreateTable(User.__table__))

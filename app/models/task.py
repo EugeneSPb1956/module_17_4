@@ -14,10 +14,7 @@ class Task(Base):
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
     slug = Column(String, unique=True, index=True)
 
-# user_id - целое число, внешний ключ на id из таблицы 'users', не NULL, с индексом.
     user = relationship('User', back_populates='tasks')
-# user - объект связи с таблицей User, где back_populates='tasks'.
-#     products = relationship("Product", back_populates="category")
 
 
 from sqlalchemy.schema import CreateTable
